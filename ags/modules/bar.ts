@@ -99,7 +99,7 @@ function getIconNameFromClass(windowClass: string) {
 
 const dispatch = (ws: string) => hyprland.messageAsync(`dispatch workspace ${ws}`).catch(print);
 
-function Workspaces() {
+function Workspaces(monitor) {
     let workspace_buttons = new Map<Number, any>();
     const workspace_buttons_array: VariableType<Button<any, any>[] | any> = Variable([]);
 
@@ -113,8 +113,9 @@ function Workspaces() {
     }
 
     function initializeWorkspaceButtons() {
-        for (let i = 1; i <= 10; i++) {
-            workspace_buttons.set(i, createWorkspaceButton(i));
+        for (let i = 1; i <= 5; i++) {
+            let wi = i + (monitor * 5)
+            workspace_buttons.set(wi, createWorkspaceButton(wi));
         }
         workspace_buttons_array.setValue(Array.from(workspace_buttons.values()));
     }
@@ -401,21 +402,25 @@ function OpenSideBar() {
 
 const focus = ({ address }) => Utils.execAsync(`hyprctl dispatch focuswindow address:${address}`).catch(print);
 
-function TaskBar() {
+function TaskBar(monitor) {
     if (!config.config.show_taskbar) {
         return undefined;
     }
     let globalWidgets: Button<Icon<any>, any>[] = [];
 
     function Clients(clients: Client[]) {
-        const currentClientIds = clients.map((client) => client.pid);
-        globalWidgets = globalWidgets.filter((widget) => currentClientIds.includes(widget.attribute.pid));
+        const currentClientAddress = clients.map((client) => client.address);
+        globalWidgets = globalWidgets.filter((widget) => currentClientAddress.includes(widget.attribute.address));
 
         clients.forEach((client) => {
-            if (client.class === "Alacritty") return;
+            if(client.monitor !== monitor){
+                globalWidgets = globalWidgets.filter((w) => w.attribute.address !== client.address);
+                return;
+            } 
 
-            let widget = globalWidgets.find((w) => w.attribute.pid === client.pid);
+            let widget = globalWidgets.find((w) => w.attribute.address === client.address);
             if (widget) {
+                widget.attribute.workspace = client.workspace;
                 widget.tooltip_markup = client.title;
             } else {
                 let icon: string | undefined;
@@ -431,7 +436,7 @@ function TaskBar() {
                 }
 
                 widget = Widget.Button({
-                    attribute: { pid: client.pid },
+                    attribute: { pid: client.pid, address: client.address, workspace: client.workspace},
                     child: Widget.Icon({ icon }),
                     tooltip_markup: client.title,
                     on_clicked: () => focus(client)
@@ -439,6 +444,8 @@ function TaskBar() {
                 globalWidgets.push(widget);
             }
         });
+
+        globalWidgets = globalWidgets.sort((a, b) => a.attribute.workspace.id - b.attribute.workspace.id);
         return globalWidgets;
     }
 
@@ -495,23 +502,28 @@ const Dot = () =>
         css: "font-weight: 900;"
     });
 
-function Left() {
+function Left(monitor) {
     // @ts-expect-error
     return Widget.Box({
         // margin_left: 15,
         class_name: "modules-left",
         hpack: "start",
         spacing: 8,
-        children: [AppLauncher(), OpenSideLeft(), MediaPlayer(), TaskBar()]
+        children: [
+            // AppLauncher(), 
+            OpenSideLeft(), 
+            MediaPlayer(), 
+            TaskBar(monitor)
+        ]
     });
 }
 
-function Center() {
+function Center(monitor) {
     return Widget.Box({
         class_name: "modules-center",
         hpack: "center",
         spacing: 8,
-        children: [Workspaces()]
+        children: [Workspaces(monitor)]
     });
 }
 
@@ -533,8 +545,8 @@ export const Bar = async (monitor = 0) => {
         anchor: ["top", "left", "right"],
         exclusivity: "exclusive",
         child: Widget.CenterBox({
-            start_widget: Left(),
-            center_widget: Center(),
+            start_widget: Left(monitor),
+            center_widget: Center(monitor),
             end_widget: Right()
         })
     });

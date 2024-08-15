@@ -1,6 +1,6 @@
 import { NotificationsBox } from "./notifications.ts";
 import { SystemBox } from "./system.ts";
-let shown = Variable("Messages");
+let shown = Variable("System");
 import Gtk from "gi://Gtk?version=3.0";
 import { MaterialIcon } from "icons.ts";
 

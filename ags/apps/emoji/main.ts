@@ -332,7 +332,7 @@ export const EmojisWindow = () => {
     let window = RegularWindow({
         title: "Emoji Picker",
         default_height: 600,
-        default_width: 400,
+        default_width: 600,
         class_name: "emojis",
         child: EmojiList(),
         setup(win: any) {

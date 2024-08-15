@@ -13,6 +13,14 @@ get_swap_usage() {
     free -m | awk 'NR==3 { if ($2 == 0) { print 0 } else { printf "%.0f\n", $3*100/$2 } }'
 }
 
+get_disk_usage_percent() {
+    df -h / | awk 'NR==2 { printf "%.0f\n", $5 }'
+}
+
+get_disk_usage() {
+    df -h / | awk 'NR==2 { printf $3 }'
+}
+
 get_cpu_temp() {
     sensors | grep -i 'core ' | awk '{sum+=$3; count+=1} END {if (count > 0) print sum/count; else print "Undefined"}'
 }
@@ -53,12 +61,16 @@ get_uptime() {
         -e 's/ $//g'
 }
 
-if [[ "$1" == "--cpu-usage" ]]; then
+if [[ "$1" == "--cpu-usage-percent" ]]; then
     get_cpu_usage
-elif [[ "$1" == "--ram-usage" ]]; then
+elif [[ "$1" == "--ram-usage-percent" ]]; then
     get_ram_usage
-elif [[ "$1" == "--swap-usage" ]]; then
+elif [[ "$1" == "--swap-usage-percent" ]]; then
     get_swap_usage
+elif [[ "$1" == "--disk-usage" ]]; then
+    get_disk_usage
+elif [[ "$1" == "--disk-usage-percent" ]]; then
+    get_disk_usage_percent
 elif [[ "$1" == "--cpu-temp" ]]; then
     get_cpu_temp
 elif [[ "$1" == "--cpu-name" ]]; then

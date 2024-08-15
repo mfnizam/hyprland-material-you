@@ -44,7 +44,7 @@ highlight {
 
 .corner {
     background-color: @background;
-    border-radius: 34px;
+    border-radius: 20px;
 }
 
 tooltip {
@@ -144,7 +144,7 @@ separator {
 
 .workspaces button:not(.exists) label {
     color: @onSurfaceVariant;
-    opacity: 0.6;
+    opacity: 0.1;
 }
 
 .workspaces button.active {
@@ -175,6 +175,7 @@ separator {
     color: @onSurface;
     font-size: 10px;
     font-feature-settings: "tnum";
+    margin: -5px 2px 2px 2px;
 }
 
 /* -----------------------------------------------------
@@ -564,6 +565,10 @@ window.notification-popups box.notifications {
 
 .system_box .info_box {
     padding: 20px;
+}
+
+.system_box .info_label {
+    padding: 8px 0px;
 }
 
 .usage_bar trough {

@@ -6,26 +6,27 @@ import { sideright } from "./main";
 import Pango10 from "gi://Pango";
 
 type InfoType = {
-    cpu: string;
-    ram: string;
-    swap: string;
-    cpu_temp: string;
+    cpu: {percent: string, value?: string};
+    ram: {percent: string, value?: string};
+    swap: {percent: string, value?: string};
+    disk: {percent: string, value: string};
+    cpu_temp: {percent: string, value?: string};
 };
 
-async function SystemInfo(): Promise<InfoType> {
-    const cpu_usage = await Utils.execAsync(`${App.configDir}/scripts/system.sh --cpu-usage`)
+async function SystemInfo(currentUsage): Promise<InfoType> {
+    const cpu_usage = await Utils.execAsync(`${App.configDir}/scripts/system.sh --cpu-usage-percent`)
         .then((str) => String(str))
         .catch((err) => {
             print(err);
             return "0";
         });
-    const ram_usage = await Utils.execAsync(`${App.configDir}/scripts/system.sh --ram-usage`)
+    const ram_usage = await Utils.execAsync(`${App.configDir}/scripts/system.sh --ram-usage-percent`)
         .then((str) => String(str))
         .catch((err) => {
             print(err);
             return "0";
         });
-    const swap_usage = await Utils.execAsync(`${App.configDir}/scripts/system.sh --swap-usage`)
+    const swap_usage = await Utils.execAsync(`${App.configDir}/scripts/system.sh --swap-usage-percent`)
         .then((str) => String(str))
         .catch((err) => {
             print(err);
@@ -37,11 +38,31 @@ async function SystemInfo(): Promise<InfoType> {
             print(err);
             return "0";
         });
+    
+    let disk_usage = currentUsage['disk'].value;
+    let disk_usage_percent = currentUsage['disk'].percent;
+    if(currentUsage['disk'].percent === "0"){
+        disk_usage_percent = await Utils.execAsync(`${App.configDir}/scripts/system.sh --disk-usage-percent`)
+            .then((str) => String(str))
+            .catch((err) => {
+                print(err);
+                return "0";
+            });
+
+        disk_usage = await Utils.execAsync(`${App.configDir}/scripts/system.sh --disk-usage`)
+            .then((str) => String(str))
+            .catch((err) => {
+                print(err);
+                return "0";
+            });
+    } 
+
     return {
-        cpu: cpu_usage,
-        ram: ram_usage,
-        swap: swap_usage,
-        cpu_temp: cpu_temp
+        cpu: {percent: cpu_usage, value: undefined},
+        ram: {percent: ram_usage, value: undefined},
+        swap: {percent: swap_usage, value: undefined},
+        disk: {percent: disk_usage_percent, value: disk_usage},
+        cpu_temp: {percent: cpu_temp, value: undefined}
     };
 }
 
@@ -63,17 +84,18 @@ export const current_brightness = Variable(100, {
 });
 
 const usage_default = {
-    cpu: "0",
-    ram: "0",
-    swap: "0",
-    cpu_temp: "0"
+    cpu: {percent: "0", value: undefined},
+    ram: {percent: "0", value: undefined},
+    swap: {percent: "0", value: undefined},
+    cpu_temp: {percent: "0", value: undefined},
+    disk: {percent: "0", value: "0"}
 };
 
 const usage = Variable(usage_default);
 Utils.interval(1000, async () => {
     Utils.idle(() => {
         if (sideright?.visible) {
-            SystemInfo().then((result) => {
+            SystemInfo(usage.value).then((result) => {
                 usage.setValue(result);
             });
         }
@@ -83,7 +105,7 @@ Utils.interval(1000, async () => {
 const Usage = (name: string, var_name: keyof InfoType, class_name: string | undefined) => {
     const usage_progress_bar = Widget.ProgressBar({
         class_name: "usage_bar",
-        value: usage.bind().as((usage) => Number(usage[var_name]) / 100)
+        value: usage.bind().as((usage) => Number(usage[var_name].percent) / 100)
     });
     const usage_overlay = Widget.Overlay({
         child: usage_progress_bar,
@@ -98,7 +120,7 @@ const Usage = (name: string, var_name: keyof InfoType, class_name: string | unde
         orientation: Gtk.Orientation.VERTICAL,
         children: [
             Widget.Label({
-                label: usage.bind().as((usage) => `${name}: ${usage[var_name]}%`),
+                label: usage.bind().as((usage) => `${name}: ${usage[var_name].percent}% ${usage[var_name].value? '(' + usage[var_name]?.value + ')' : ''}`),
                 hpack: "start",
                 vpack: "center"
             }),
@@ -110,34 +132,64 @@ const Usage = (name: string, var_name: keyof InfoType, class_name: string | unde
 };
 
 const InfoLabel = (name: string, var_name: keyof InfoType, end: string) => {
-    return Widget.Label({
+    return Widget.Box({
         class_name: "info_label",
-        wrap: true,
-        xalign: 0,
-        hpack: "start",
-        label: usage.bind().as((usage) => `${name}: ${usage[var_name]}${end}`)
+        children: [
+            Widget.Label({
+                xalign: 0,
+                hpack: "start",
+                width_chars: 10,
+                label: name
+            }),
+            Widget.Label({
+                wrap: true,
+                xalign: 0,
+                hpack: "start",
+                label: usage.bind().as((usage) => `: ${usage[var_name].percent}${end}`)
+            })
+        ]
     });
 };
 
 const InfoLabelString = (name: string, value: string, end: string) => {
-    return Widget.Label({
+    return Widget.Box({
         class_name: "info_label",
-        wrap: true,
-        wrap_mode: Pango10.WrapMode.WORD_CHAR,
-        xalign: 0,
-        hpack: "start",
-        label: `${name}: ${value}${end}`
+        children: [
+            Widget.Label({
+                xalign: 0,
+                hpack: "start",
+                width_chars: 10,
+                label: `${name}`
+            }),
+            Widget.Label({
+                wrap: true,
+                wrap_mode: Pango10.WrapMode.WORD_CHAR,
+                xalign: 0,
+                hpack: "start",
+                label: `: ${value}${end}`
+            })
+        ]
     });
 };
 
 const InfoLabelVariableString = (name: string, value: VariableType<string>, end: string) => {
-    return Widget.Label({
+    return Widget.Box({
         class_name: "info_label",
-        wrap: true,
-        wrap_mode: Pango10.WrapMode.WORD_CHAR,
-        xalign: 0,
-        hpack: "start",
-        label: value.bind().as((value) => `${name}: ${value}${end}`)
+        children: [
+            Widget.Label({
+                xalign: 0,
+                hpack: "start",
+                width_chars: 10,
+                label: name
+            }),
+            Widget.Label({
+                wrap: true,
+                wrap_mode: Pango10.WrapMode.WORD_CHAR,
+                xalign: 0,
+                hpack: "start",
+                label: value.bind().as((value) => `: ${value}${end}`)
+            })
+        ]
     });
 };
 
@@ -180,7 +232,8 @@ export function SystemBox() {
         children: [
             Usage("CPU", "cpu", "cpu_usage"),
             Usage("RAM", "ram", "ram_usage"),
-            Usage("SWAP", "swap", "swap_usage")
+            Usage("SWAP", "swap", "swap_usage"),
+            Usage("DISK", "disk", "disk_usage")
         ]
     });
 

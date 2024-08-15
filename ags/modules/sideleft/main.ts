@@ -4,11 +4,9 @@ import { MaterialIcon } from "icons.ts";
 import { WeatherBox } from "./weather.ts";
 import { Media } from "./players.ts";
 import { Applauncher } from "./applauncher.ts";
-import { geminiPage } from "./gemini.ts";
-import { chatsPage } from "./chats.ts";
 
 export const WINDOW_NAME = "sideleft";
-export const shown = Variable("weather");
+export const shown = Variable("apps");
 
 export function toggleAppsWindow() {
     if (shown.value == "apps" && sideleft.visible) App.closeWindow(WINDOW_NAME);
@@ -73,11 +71,9 @@ function Button({ page, label, icon, icon_widget }: ButtonType) {
 function Navigation() {
     let stack = Widget.Stack({
         children: {
-            weather: WeatherBox(),
-            media: Media(),
             apps: Applauncher(),
-            gemini: geminiPage,
-            chats: chatsPage
+            media: Media(),
+            weather: WeatherBox()
         },
         hexpand: true,
         transition: "crossfade",
@@ -92,9 +88,9 @@ function Navigation() {
         hpack: "start",
         children: [
             Button({
-                page: "weather",
-                label: "Weather",
-                icon: "cloud"
+                page: "apps",
+                label: "Apps",
+                icon: "search"
             }),
             Button({
                 page: "media",
@@ -102,24 +98,10 @@ function Navigation() {
                 icon: "music_note"
             }),
             Button({
-                page: "apps",
-                label: "Apps",
-                icon: "search"
+                page: "weather",
+                label: "Weather",
+                icon: "cloud"
             }),
-            Button({
-                page: "gemini",
-                label: "Gemini",
-                icon_widget: Widget.Icon({
-                    icon: "google-gemini-symbolic",
-                    size: 20,
-                    class_name: "icon"
-                })
-            }),
-            Button({
-                page: "chats",
-                label: "Chat",
-                icon: "chat"
-            })
         ]
     });
     return Widget.Box({
